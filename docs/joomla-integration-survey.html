@@ -164,6 +164,21 @@
     }
 
     /**
+     * Normalisasi nilai indeks ke persentase untuk progress bar.
+     * IKM skala 1-4 -> dikonversi ke 0-100%.
+     * NIK/skala lain yang sudah 0-100 -> dipakai langsung.
+     */
+    function normalizeBarPercentage(n) {
+        if (n === null || n === undefined) return 0;
+        var num = Number(n);
+        if (isNaN(num)) return 0;
+        if (num > 0 && num <= 4.5) {
+            return (num / 4) * 100;
+        }
+        return Math.max(0, Math.min(100, num));
+    }
+
+    /**
      * Pilih konfigurasi sumbu Y Chart.js secara adaptif (zoom-to-data):
      *   1. Hitung min/max data, kasih padding ~25% (minimal 0.05)
      *      supaya garis tidak menempel ke tepi chart.
@@ -259,7 +274,10 @@
     }
 
     /**
-     * Tentukan kategori mutu A/B/C/D berdasarkan nilai indeks (0-100).
+     * Tentukan kategori mutu A/B/C/D berdasarkan nilai indeks.
+     * Mendukung dua skala:
+     *   - Skala IKM (1-4): A ≥ 3,5324 · B ≥ 3,0644 · C ≥ 2,6000 · D < 2,6000
+     *   - Skala NIK (0-100): A ≥ 88,31 · B ≥ 76,61 · C ≥ 65,00 · D < 65,00
      * Bila kategori_mutu sudah dari API, gunakan itu.
      */
     function deriveMutu(item) {
@@ -269,10 +287,21 @@
         }
         var n = safeNum(item ? item.nilai_indeks : null);
         if (n === null) return null;
-        if (n >= 88.31) return 'A';
-        if (n >= 76.61) return 'B';
-        if (n >= 65.00) return 'C';
-        return 'D';
+        // Auto-detect scale berdasarkan rentang nilai
+        var isIkmScale = (n > 0 && n <= 4.5);
+        if (isIkmScale) {
+            // Threshold skala IKM (1-4)
+            if (n >= 3.5324) return 'A';
+            if (n >= 3.0644) return 'B';
+            if (n >= 2.6000) return 'C';
+            return 'D';
+        } else {
+            // Threshold skala NIK (0-100)
+            if (n >= 88.31) return 'A';
+            if (n >= 76.61) return 'B';
+            if (n >= 65.00) return 'C';
+            return 'D';
+        }
     }
 
     function mutuLabel(m) {
@@ -350,9 +379,11 @@
         html += '<p class="score-card-period">' + escapeHtml(item.periode || '-') + '</p>';
 
         if (nilai !== null) {
+            var isIkmScale = nilai > 0 && nilai <= 4.5;
+            var displayMax = isIkmScale ? '/4' : '/100';
             html += '<div class="score-card-num" style="color:' + colorByMutu(mutu) + '">' +
-                     formatNum(nilai, 2) + '<small>/100</small></div>';
-            var pct = Math.max(0, Math.min(100, nilai));
+                     formatNum(nilai, 2) + '<small>' + displayMax + '</small></div>';
+            var pct = normalizeBarPercentage(nilai);
             html += '<div class="score-card-bar"><div class="score-card-bar-fill" style="width:' +
                      pct.toFixed(1) + '%;background:' + colorByMutu(mutu) + '"></div></div>';
         } else {
@@ -429,7 +460,7 @@
             var prevN = i > 0 ? safeNum(sorted[i - 1].nilai_indeks) : null;
             var mutu = deriveMutu(it);
             var resp = safeNum(it.jumlah_responden);
-            var pct = n !== null ? Math.max(0, Math.min(100, n)) : 0;
+            var pct = normalizeBarPercentage(n);
             var color = colorByMutu(mutu);
 
             html += '<tr>';

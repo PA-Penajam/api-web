@@ -88,10 +88,6 @@ $router->group(['prefix' => 'api', 'middleware' => 'throttle:100,1'], function (
     $router->get('inovasi', 'InovasiController@index');
     $router->get('inovasi/{id:[0-9]+}', 'InovasiController@show');
 
-    // Radius Biaya Routes
-    $router->get('radius-biaya', 'SkRadiusBiayaController@index');
-    $router->get('radius-biaya/{id:[0-9]+}', 'SkRadiusBiayaController@show');
-
     // Kelompok Jabatan Routes
     $router->get('kelompok-jabatan', 'KelompokJabatanController@index');
     $router->get('kelompok-jabatan/{id:[0-9]+}', 'KelompokJabatanController@show');
@@ -255,9 +251,4 @@ $router->group(['prefix' => 'api', 'middleware' => ['api.key', 'throttle:100,1']
     $router->post('survey-pekan/{id:[0-9]+}', 'SurveyPekanController@update');
     $router->delete('survey-pekan/{id:[0-9]+}', 'SurveyPekanController@destroy');
 
-    // Radius Biaya
-    $router->post('radius-biaya', 'SkRadiusBiayaController@store');
-    $router->put('radius-biaya/{id:[0-9]+}', 'SkRadiusBiayaController@update');
-    $router->post('radius-biaya/{id:[0-9]+}', 'SkRadiusBiayaController@update');
-    $router->delete('radius-biaya/{id:[0-9]+}', 'SkRadiusBiayaController@destroy');
 });
