@@ -273,6 +273,110 @@ class SakipController extends Controller
         ]);
     }
 
+    /**
+     * Perbarui data reviu SAKIP (PROTECTED)
+     */
+    public function updateRevision(Request $request, int $id, int $revisionId): JsonResponse
+    {
+        if ($id <= 0 || $revisionId <= 0) {
+            return response()->json([
+                'success' => false,
+                'message' => 'ID tidak valid',
+            ], 400);
+        }
+
+        $item = Sakip::find($id);
+        if (!$item) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Data tidak ditemukan',
+            ], 404);
+        }
+
+        $revision = $item->revisions()->where('id', $revisionId)->first();
+        if (!$revision) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Data reviu tidak ditemukan',
+            ], 404);
+        }
+
+        $this->validate($request, [
+            'tanggal_publish' => 'required|date',
+            'link_dokumen' => 'nullable|string|max:500',
+            'keterangan_revisi' => 'nullable|string',
+            'file_dokumen' => 'nullable|file|mimes:pdf,doc,docx,jpg,jpeg,png|max:20480',
+        ], [
+            'tanggal_publish.required' => 'Tanggal publish reviu wajib diisi.',
+            'tanggal_publish.date' => 'Tanggal publish harus berupa tanggal yang valid.',
+        ]);
+
+        $revisionLink = $request->input('link_dokumen', $revision->link_dokumen);
+        if ($request->hasFile('file_dokumen')) {
+            $uploadedLink = $this->uploadFile($request->file('file_dokumen'), $request, 'sakip');
+            if ($uploadedLink) {
+                $revisionLink = $uploadedLink;
+            }
+        }
+
+        if ($this->isEmptyText($revisionLink)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Dokumen reviu wajib diisi melalui link atau file.',
+            ], 422);
+        }
+
+        $revision->update($this->sanitizeInput([
+            'tanggal_publish' => $request->input('tanggal_publish'),
+            'keterangan' => $request->input('keterangan_revisi'),
+            'link_dokumen' => $revisionLink,
+        ]));
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Reviu berhasil diperbarui',
+            'data' => $this->formatSakip($item->fresh()),
+            'revision' => $this->formatRevision($revision->fresh()),
+        ]);
+    }
+
+    /**
+     * Hapus data reviu SAKIP (PROTECTED)
+     */
+    public function destroyRevision(int $id, int $revisionId): JsonResponse
+    {
+        if ($id <= 0 || $revisionId <= 0) {
+            return response()->json([
+                'success' => false,
+                'message' => 'ID tidak valid',
+            ], 400);
+        }
+
+        $item = Sakip::find($id);
+        if (!$item) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Data tidak ditemukan',
+            ], 404);
+        }
+
+        $revision = $item->revisions()->where('id', $revisionId)->first();
+        if (!$revision) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Data reviu tidak ditemukan',
+            ], 404);
+        }
+
+        $revision->delete();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Reviu berhasil dihapus',
+            'data' => $this->formatSakip($item->fresh()),
+        ]);
+    }
+
     private function storeRevision(Request $request, Sakip $item): JsonResponse
     {
         if ($this->isEmptyText($item->link_dokumen)) {

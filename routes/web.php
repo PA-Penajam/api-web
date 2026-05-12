@@ -165,6 +165,9 @@ $router->group(['prefix' => 'api', 'middleware' => ['api.key', 'throttle:100,1']
 
     // SAKIP
     $router->post('sakip', 'SakipController@store');
+    $router->put('sakip/{id:[0-9]+}/reviu/{revisionId:[0-9]+}', 'SakipController@updateRevision');
+    $router->post('sakip/{id:[0-9]+}/reviu/{revisionId:[0-9]+}', 'SakipController@updateRevision');
+    $router->delete('sakip/{id:[0-9]+}/reviu/{revisionId:[0-9]+}', 'SakipController@destroyRevision');
     $router->put('sakip/{id:[0-9]+}', 'SakipController@update');
     $router->post('sakip/{id:[0-9]+}', 'SakipController@update');
     $router->delete('sakip/{id:[0-9]+}', 'SakipController@destroy');
