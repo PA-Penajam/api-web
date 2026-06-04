@@ -79,8 +79,8 @@ class LaporanKeuanganSeeder extends Seeder
                 'judul' => $item['judul'],
                 'file_url' => $item['file_url'],
                 'cover_url' => $item['cover_url'],
-                'created_at' => now(),
-                'updated_at' => now(),
+                'created_at' => Carbon::now(),
+                'updated_at' => Carbon::now(),
             ]);
         }
 
