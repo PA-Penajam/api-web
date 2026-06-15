@@ -3,7 +3,6 @@
 namespace App\Http\Controllers;
 
 use App\Models\LaporanKeuangan;
-use App\Services\GoogleDriveService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
@@ -135,10 +134,20 @@ class LaporanKeuanganController extends Controller
         $data['periode'] = trim(strip_tags((string) ($data['periode'] ?? '')));
 
         try {
-            $data['file_url'] = $this->uploadToGoogleDrive($request->file('file_upload'), $request, 'uploads/laporan-keuangan');
+            $fileLink = $this->uploadFile($request->file('file_upload'), $request, 'laporan-keuangan');
+            if (!$fileLink) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Gagal mengupload file PDF. Silakan coba lagi.',
+                ], 500);
+            }
+            $data['file_url'] = $fileLink;
 
             if ($request->hasFile('cover_upload')) {
-                $data['cover_url'] = $this->uploadToGoogleDrive($request->file('cover_upload'), $request, 'uploads/laporan-keuangan/covers');
+                $coverLink = $this->uploadFile($request->file('cover_upload'), $request, 'laporan-keuangan/covers');
+                if ($coverLink) {
+                    $data['cover_url'] = $coverLink;
+                }
             }
 
             $created = LaporanKeuangan::create($data);
@@ -197,11 +206,21 @@ class LaporanKeuanganController extends Controller
 
         try {
             if ($request->hasFile('file_upload')) {
-                $data['file_url'] = $this->uploadToGoogleDrive($request->file('file_upload'), $request, 'uploads/laporan-keuangan');
+                $fileLink = $this->uploadFile($request->file('file_upload'), $request, 'laporan-keuangan');
+                if (!$fileLink) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'Gagal mengupload file PDF. Silakan coba lagi.',
+                    ], 500);
+                }
+                $data['file_url'] = $fileLink;
             }
 
             if ($request->hasFile('cover_upload')) {
-                $data['cover_url'] = $this->uploadToGoogleDrive($request->file('cover_upload'), $request, 'uploads/laporan-keuangan/covers');
+                $coverLink = $this->uploadFile($request->file('cover_upload'), $request, 'laporan-keuangan/covers');
+                if ($coverLink) {
+                    $data['cover_url'] = $coverLink;
+                }
             }
 
             $report->update($data);
@@ -258,24 +277,4 @@ class LaporanKeuanganController extends Controller
         }
     }
 
-    /**
-     * Helper: Upload file ke Google Drive dan return URL-nya.
-     *
-     * @param \Illuminate\Http\UploadedFile $file
-     * @param Request $request
-     * @param string $folder
-     * @return string
-     * @throws \Exception
-     */
-    private function uploadToGoogleDrive($file, Request $request, string $folder): string
-    {
-        $driveService = new GoogleDriveService();
-        $result = $driveService->uploadFile($file, $folder);
-
-        if (!$result || !isset($result['webViewLink'])) {
-            throw new \Exception('Gagal upload file ke Google Drive');
-        }
-
-        return $result['webViewLink'];
-    }
 }

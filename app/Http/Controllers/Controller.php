@@ -49,6 +49,7 @@ class Controller extends BaseController
             'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
             'image/jpeg',
             'image/png',
+            'image/webp',
         ];
         $realMime = $file->getMimeType();
         if (!in_array($realMime, $allowedMimes)) {

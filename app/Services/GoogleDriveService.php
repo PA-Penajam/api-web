@@ -113,4 +113,25 @@ class GoogleDriveService
 
         return $folder->id;
     }
+
+    /**
+     * Upload file ke Google Drive dan return array dengan webViewLink.
+     * Method ini dipanggil oleh controller yang mengharapkan return array.
+     *
+     * @param \Illuminate\Http\UploadedFile $file
+     * @param string|null $folderId
+     * @return array|null Array dengan key 'webViewLink' atau null jika gagal
+     */
+    public function uploadFile($file, $folderId = null)
+    {
+        $webViewLink = $this->upload($file, $folderId);
+        
+        if (!$webViewLink) {
+            return null;
+        }
+
+        return [
+            'webViewLink' => $webViewLink
+        ];
+    }
 }
