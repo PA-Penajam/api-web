@@ -97,18 +97,45 @@
 }
 
 .link-surat {
-    display: inline-block;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
     padding: 4px 10px;
-    background: #22c55e;
+    background: #3b82f6;
     color: white !important;
     text-decoration: none;
     border-radius: 4px;
     font-size: 0.75rem;
     white-space: nowrap;
+    transition: background 0.2s;
 }
 
 .link-surat:hover {
-    background: #16a34a;
+    background: #2563eb;
+}
+
+.link-pbt {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 10px;
+    background: #f59e0b;
+    color: white !important;
+    text-decoration: none;
+    border-radius: 4px;
+    font-size: 0.75rem;
+    white-space: nowrap;
+    transition: background 0.2s;
+}
+
+.link-pbt:hover {
+    background: #d97706;
+}
+
+.dokumen-cell {
+    display: flex;
+    gap: 4px;
+    flex-wrap: wrap;
 }
 
 .loading-message {
@@ -145,10 +172,6 @@
         align-items: flex-start;
     }
     
-    .filter-info {
-        margin-left: 0;
-        margin-top: 0.5rem;
-    }
     .filter-info {
         margin-left: 0;
         margin-top: 0.5rem;
@@ -290,14 +313,13 @@
                     <th>Panggilan Ikrar</th>
                     <th>Tanggal Sidang</th>
                     <th>PIP</th>
-                    <th>Surat</th>
-                    <th>PBT</th>
+                    <th>Dokumen</th>
                     <th>Ket</th>
                 </tr>
             </thead>
             <tbody>
                 <tr>
-                    <td colspan="12" class="loading-message">Memuat data...</td>
+                    <td colspan="11" class="loading-message">Memuat data...</td>
                 </tr>
             </tbody>
         </table>
@@ -386,7 +408,7 @@
                     console.error('Error loading data:', error);
                     document.getElementById('dataInfo').textContent = 'Error memuat data';
                     $('#tabelPanggilan tbody').html(
-                        '<tr><td colspan="12" class="error-message">Gagal memuat data. Pastikan API terhubung.</td></tr>'
+                        '<tr><td colspan="11" class="error-message">Gagal memuat data. Pastikan API terhubung.</td></tr>'
                     );
                 }
             },
@@ -413,13 +435,15 @@
                 },
                 { 
                     data: 'alamat_asal',
-                    render: function(data) {
+                    render: function(data, type) {
                         if (!data) return '-';
-                        // Batasi panjang untuk tampilan
+                        if (type !== 'display') return data;
+                        // SECURITY: Escape HTML untuk mencegah XSS
+                        var esc = data.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
                         if (data.length > 80) {
-                            return '<span title="' + data.replace(/"/g, '&quot;') + '">' + data.substring(0, 80) + '...</span>';
+                            return '<span title="' + esc + '">' + esc.substring(0, 80) + '...</span>';
                         }
-                        return data;
+                        return esc;
                     }
                 },
                 { 
@@ -452,22 +476,19 @@
                         return data || '-';
                     }
                 },
-                { 
-                    data: 'link_surat',
-                    render: function(data) {
-                        if (data && data !== '#') {
-                            return '<a href="' + data + '" target="_blank" rel="noopener" class="link-surat">&#128196; Lihat</a>';
-                        }
-                        return '-';
-                    }
-                },
                 {
-                    data: 'link_pbt',
-                    render: function(data) {
-                        if (data && data !== '#') {
-                            return '<a href="' + data + '" target="_blank" rel="noopener" class="link-surat">&#128196; Lihat</a>';
+                    data: null,
+                    render: function(data, type, row) {
+                        var parts = [];
+                        if (row.link_surat && row.link_surat !== '#') {
+                            parts.push('<a href="' + row.link_surat + '" target="_blank" rel="noopener" class="link-surat">&#128196; Surat</a>');
                         }
-                        return '-';
+                        if (row.link_pbt && row.link_pbt !== '#') {
+                            parts.push('<a href="' + row.link_pbt + '" target="_blank" rel="noopener" class="link-pbt">&#128203; PBT</a>');
+                        }
+                        return parts.length
+                            ? '<div class="dokumen-cell">' + parts.join('') + '</div>'
+                            : '-';
                     }
                 },
                 {
@@ -476,6 +497,13 @@
                         return data || '-';
                     }
                 }
+            ],
+            columnDefs: [
+                { responsivePriority: 1, targets: [0, 1, 9] },
+                { responsivePriority: 2, targets: [2] },
+                { responsivePriority: 3, targets: [7] },
+                { responsivePriority: 4, targets: [4, 5] },
+                { responsivePriority: 5, targets: [3, 6, 8, 10] }
             ],
             responsive: {
                 details: {
