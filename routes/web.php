@@ -115,8 +115,8 @@ $router->group(['prefix' => 'api', 'middleware' => 'throttle:100,1'], function (
     $router->get('laporan-keuangan/{id:[0-9]+}', 'LaporanKeuanganController@show');
 });
 
-// SECURITY: Protected routes dengan API Key + rate limiting (100 request/menit)
-$router->group(['prefix' => 'api', 'middleware' => ['api.key', 'throttle:100,1']], function () use ($router) {
+// SECURITY: Protected routes dengan API Key + rate limiting (30 request/menit)
+$router->group(['prefix' => 'api', 'middleware' => ['api.key', 'throttle:30,1']], function () use ($router) {
     // Panggilan Ghaib
     $router->post('panggilan', 'PanggilanController@store');
     $router->put('panggilan/{id:[0-9]+}', 'PanggilanController@update');

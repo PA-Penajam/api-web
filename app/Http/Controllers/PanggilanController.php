@@ -148,11 +148,10 @@ class PanggilanController extends Controller
                 continue;
             }
 
-            $link = $this->uploadPanggilanAttachment(
+            $link = $this->uploadFile(
+                $request->file($uploadConfig['field']),
                 $request,
-                $uploadConfig['field'],
-                $uploadConfig['folder'],
-                $request->nomor_perkara
+                $uploadConfig['folder']
             );
 
             if (!$link) {
@@ -218,6 +217,8 @@ class PanggilanController extends Controller
         // SECURITY: Sanitasi input (skip strip_tags untuk link_surat dan nomor_perkara)
         $data = $this->sanitizeInput($data, ['link_surat', 'link_pbt', 'nomor_perkara']);
 
+        $oldLinks = [];
+
         foreach ([
             ['field' => 'file_upload', 'target' => 'link_surat', 'folder' => 'panggilan'],
             ['field' => 'file_upload_pbt', 'target' => 'link_pbt', 'folder' => 'panggilan/pbt'],
@@ -226,11 +227,15 @@ class PanggilanController extends Controller
                 continue;
             }
 
-            $link = $this->uploadPanggilanAttachment(
+            // Simpan link lama untuk cleanup setelah update berhasil
+            if ($panggilan->{$uploadConfig['target']}) {
+                $oldLinks[] = $panggilan->{$uploadConfig['target']};
+            }
+
+            $link = $this->uploadFile(
+                $request->file($uploadConfig['field']),
                 $request,
-                $uploadConfig['field'],
-                $uploadConfig['folder'],
-                $request->nomor_perkara ?? $panggilan->nomor_perkara
+                $uploadConfig['folder']
             );
 
             if (!$link) {
@@ -244,6 +249,11 @@ class PanggilanController extends Controller
         }
 
         $panggilan->update($data);
+
+        // Cleanup file lokal lama yang sudah diganti
+        foreach ($oldLinks as $oldLink) {
+            $this->deleteLocalFile($oldLink);
+        }
 
         return response()->json([
             'success' => true,
@@ -274,6 +284,10 @@ class PanggilanController extends Controller
             ], 404);
         }
 
+        // Hapus file lokal terkait sebelum menghapus record
+        $this->deleteLocalFile($panggilan->link_surat);
+        $this->deleteLocalFile($panggilan->link_pbt);
+
         $panggilan->delete();
 
         return response()->json([
@@ -282,57 +296,30 @@ class PanggilanController extends Controller
         ]);
     }
 
-    private function uploadPanggilanAttachment(Request $request, string $fieldName, string $folder, string $nomorPerkara): ?string
+    /**
+     * Hapus file lokal berdasarkan URL (hanya file di /uploads/)
+     * File Google Drive tidak dihapus otomatis (memerlukan API terpisah)
+     */
+    private function deleteLocalFile(?string $url): void
     {
+        if (!$url || !str_contains($url, '/uploads/')) {
+            return;
+        }
+
         try {
-            if (!class_exists('\App\Services\GoogleDriveService')) {
-                throw new \Exception('Class GoogleDriveService not found');
+            $path = parse_url($url, PHP_URL_PATH);
+            if ($path) {
+                $fullPath = app()->basePath('public' . $path);
+                if (file_exists($fullPath)) {
+                    unlink($fullPath);
+                    \Illuminate\Support\Facades\Log::info('File lokal berhasil dihapus', ['path' => $fullPath]);
+                }
             }
-
-            $driveService = new \App\Services\GoogleDriveService();
-            $link = $driveService->upload($request->file($fieldName));
-
-            \Illuminate\Support\Facades\Log::info('File Panggilan berhasil diupload ke Google Drive', [
-                'field' => $fieldName,
-                'nomor_perkara' => $nomorPerkara,
-                'link' => $link,
-            ]);
-
-            return $link;
         } catch (\Throwable $e) {
-            \Illuminate\Support\Facades\Log::error('Google Drive gagal. Menggunakan penyimpanan lokal.', [
-                'field' => $fieldName,
-                'nomor_perkara' => $nomorPerkara,
+            \Illuminate\Support\Facades\Log::warning('Gagal menghapus file lokal', [
+                'url' => $url,
                 'error' => $e->getMessage()
             ]);
-
-            try {
-                $file = $request->file($fieldName);
-                $filename = time() . '_' . preg_replace('/[^a-zA-Z0-9.]/', '_', $file->getClientOriginalName());
-                $destinationPath = app()->basePath('public/uploads/' . $folder);
-
-                if (!file_exists($destinationPath)) {
-                    mkdir($destinationPath, 0755, true);
-                }
-
-                $file->move($destinationPath, $filename);
-
-                $link = $request->root() . '/uploads/' . $folder . '/' . $filename;
-
-                \Illuminate\Support\Facades\Log::info('File disimpan di lokal (Fallback)', [
-                    'field' => $fieldName,
-                    'link' => $link,
-                ]);
-
-                return $link;
-            } catch (\Throwable $localEx) {
-                \Illuminate\Support\Facades\Log::error('Gagal simpan lokal', [
-                    'field' => $fieldName,
-                    'error' => $localEx->getMessage()
-                ]);
-
-                return null;
-            }
         }
     }
 
