@@ -32,6 +32,7 @@ class DatabaseSeeder extends Seeder
             MediasiSeeder::class,
             SurveyLaporanSeeder::class,
             SurveyPekanSeeder::class,
+            ProfilPimpinanSeeder::class,
         ]);
     }
 }
