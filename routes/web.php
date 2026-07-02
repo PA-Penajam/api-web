@@ -29,6 +29,8 @@ $router->group(['prefix' => 'api', 'middleware' => 'throttle:100,1'], function (
     // Agenda Pimpinan
     $router->get('agenda', 'AgendaPimpinanController@index');
     $router->get('agenda/{id:[0-9]+}', 'AgendaPimpinanController@show');
+    $router->get('profil-pimpinan', 'ProfilPimpinanController@index');
+    $router->get('profil-pimpinan/{idOrSlug}', 'ProfilPimpinanController@show');
 
     // LHKPN Routes
     $router->get('lhkpn', 'LhkpnController@index');
@@ -140,6 +142,10 @@ $router->group(['prefix' => 'api', 'middleware' => ['api.key', 'throttle:30,1']]
     $router->put('agenda/{id:[0-9]+}', 'AgendaPimpinanController@update');
     $router->post('agenda/{id:[0-9]+}', 'AgendaPimpinanController@update');
     $router->delete('agenda/{id:[0-9]+}', 'AgendaPimpinanController@destroy');
+    $router->post('profil-pimpinan', 'ProfilPimpinanController@store');
+    $router->put('profil-pimpinan/{id:[0-9]+}', 'ProfilPimpinanController@update');
+    $router->post('profil-pimpinan/{id:[0-9]+}', 'ProfilPimpinanController@update');
+    $router->delete('profil-pimpinan/{id:[0-9]+}', 'ProfilPimpinanController@destroy');
 
     // LHKPN
     $router->post('lhkpn', 'LhkpnController@store');
